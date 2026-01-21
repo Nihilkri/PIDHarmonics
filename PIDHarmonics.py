@@ -41,21 +41,21 @@ def getkeyinput(dt):
   if keys[pygame.K_ESCAPE]:
     running = False
   if keys[pygame.K_w]:
-    bots[0].ix -= 0.25
+    bots[0].ix += 0.01
   if keys[pygame.K_s]:
-    bots[0].ix += 0.25
+    bots[0].ix -= 0.01
   if keys[pygame.K_a]:
-    bots[0].iv -= 0.25
+    bots[0].iv -= 0.01
   if keys[pygame.K_d]:
-    bots[0].iv += 0.25
+    bots[0].iv += 0.01
   if keys[pygame.K_UP]:
-    bots[0].ix -= 0.25
+    bots[0].k += 0.01
   if keys[pygame.K_DOWN]:
-    bots[0].ix += 0.25
+    bots[0].k -= 0.01
   if keys[pygame.K_LEFT]:
-    bots[0].iv -= 0.25
+    bots[0].mu -= 0.01
   if keys[pygame.K_RIGHT]:
-    bots[0].iv += 0.25
+    bots[0].mu += 0.01
   if keys[pygame.K_SPACE] and not hold[pygame.K_SPACE]:
     paused = not paused
   # Todo: Only PID() on parameter change
@@ -66,8 +66,6 @@ def drawrobot(self: Robot.Robot, sp):
   pts = []
   steady = False
   mode = 1
-  # self.__init__()
-  self.pid()
   for t in range(sx):
     if steady:
       mode += 1
@@ -90,7 +88,6 @@ def main():
   sp = 0
   bots.append(Robot.Robot(1, 0, sx))
   bots[0].mu = 0.85
-  bots[0].feq = bots[0].feq_spring
 
   # player_pos = pygame.Vector2(screen.get_width() / 2, screen.get_height() / 2)
 
