@@ -10,7 +10,7 @@ pygame.init()
 screen = pygame.display.set_mode((sx, sy))
 font = pygame.font.Font(None, 32)
   
-def text(txt: str, x: int, y: int, c: tuple, bg : tuple | None = None):
+def text(txt: str, x: int, y: int, c: tuple, bg : tuple | None = "Black"):
   pygame.Surface.blit(screen, font.render(txt, True, c, bg), (x, y))
   return None
 
