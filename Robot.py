@@ -2,17 +2,18 @@ import numpy as np
 
 
 class Robot:
-	def __init__(self, nid, i, nl, nc, nfeq = "PID"):
+	def __init__(self, nid, i, nl, nc):
 		self.id   = nid		# Serial Identification Number
 		self._skl = i[0]	# Time scaling
 		self._ix  = i[1]	# Initial Position
 		self._iv  = i[2]	# Initial Velocity
-		self._p   = i[3]	# Proportional Coefficient / Spring Constant
+		self._p   = i[3]	# Proportional Coefficient
 		self._i   = i[4]	# Integral Coefficient
 		self._d   = i[5]	# Derivative Coefficient
-		self._m   = i[6]	# Mass
-		self._mu  = i[7]	# Friction
-		self._mf  = i[8]	# Max force
+		self._k   = i[6]	# Spring Constant
+		self._m   = i[7]	# Mass
+		self._mu  = i[8]	# Friction
+		self._mf  = i[9]	# Max force
 		self.l = nl				# Simulation Length
 		self.e = np.zeros(self.l) # Error
 		self.x = np.zeros(self.l) # Position
@@ -28,12 +29,6 @@ class Robot:
 		self.info = ""
 		self.stats = ""
 		
-		if nfeq == "Spring":
-			self._feq = self.feq_spring
-		elif nfeq == "PID":
-			self._feq = self.feq_pid
-		else:
-			self._feq = nfeq
 		self.sim()
 
 	def s(self):
@@ -48,23 +43,17 @@ class Robot:
 		return None
 
 	def goal(self, t, s):
-		return np.sin(t)
+		return np.sin(t * (2.0 * np.pi))
 		#return self.x[s - 1]
 		#return np.floor(t) % 10.0
 		#return 5
 
-	def feq_spring(self, t, s):
-		return -self._p * self.x[s - 1]
-
-	def feq_pid(self, t, s):
+	def feq(self, t, s):
 		p = self._p * self.e[s]
 		i = 0 if s < 10 else self._i * (sum(self.e[s - 10:s]) / 10)
 		d = self._d * (self.e[s] - self.e[s - 1])
-		return p + i + d
-
-
-	def feq(self, t, s):
-		pass
+		k = -self._k * self.x[s - 1]
+		return p + i + d + k
 
 	def sim(self):
 		# Take notes
@@ -94,7 +83,7 @@ class Robot:
 			nerror += abs(self.e[s])
 			terror += self.e[s]
 			# Generate required thrust
-			f = self._feq(t, s)
+			f = self.feq(t, s)
 			# Generate actual available thrust
 			f = min(self.mf, f) if f > 0 else max(-self.mf, f)
 			# Accumulate total forces
@@ -123,8 +112,10 @@ class Robot:
 
 		# Update information
 		s1, s2 = self.s()
-		c = 2 * (self._p * self._m) ** 0.5
+		c = 2 * (self._k * self._m) ** 0.5
+		f = (self._k / self._m) ** 0.5
 		self.info = f"ix = {self._ix:.3f}m, iv = {self._iv:.3f}m/s, p = {self._p:.3f}, i = {self._i:.3f}, d = {self._d:.3f}, "
+		self.info += f"k = {self._k:.3f}, f = {f:.3f}, "
 		self.info += f"m = {self._m:.3f}kg, mu = {self._mu:.3f}, mf = {self._mf:.3f}N, s = [{s1:.3f}, {s2:.3f}], c = {c:.3f}        "
 
 		# Calculate post-sim stats
@@ -196,6 +187,15 @@ class Robot:
 			self.sim()
 
 	@property
+	def k(self):
+		return self._k
+	@k.setter
+	def k(self, n):
+		if self._k != n:
+			self._k = n
+			self.sim()
+
+	@property
 	def m(self):
 		return self._m
 	@m.setter
@@ -221,13 +221,3 @@ class Robot:
 		if self._mf != n and n > 0:
 			self._mf = n
 			self.sim()	
-
-	@property
-	def feq(self):
-		return self._feq
-	@feq.setter
-	def feq(self, n):
-		if self._feq != n:
-			self._feq = n
-			self.sim()
-
