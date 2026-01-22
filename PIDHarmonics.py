@@ -25,6 +25,7 @@ hold = {_:0 for _ in holdkeys}
 holdrate = 30
 bots: list[Robot.Robot] = []
 sel = 0
+mouseinfo = ""
 
 def press(key) -> bool:
   if key in holdkeys:
@@ -40,6 +41,7 @@ def getkeyinput(dt):
   global hold
   global bots
   global sel
+  global mouseinfo
 
   # poll for events
   # pygame.QUIT event means the user clicked X to close your window
@@ -49,8 +51,6 @@ def getkeyinput(dt):
     elif event.type == pygame.KEYDOWN:
       pass
 
-  # Keep this from the tutorial for when I need to have input
-  # pygame.draw.circle(screen, "red", player_pos, 40)
   keys = pygame.key.get_pressed()
   if keys[pygame.K_ESCAPE]:
     running = False
@@ -66,29 +66,32 @@ def getkeyinput(dt):
   bots[sel].p  = 1.0 if press(pygame.K_c) else (bots[sel].p  + (1 * press(pygame.K_e) - 1 * press(pygame.K_d)) * ctrlrate)
   bots[sel].i  = 0.0 if press(pygame.K_v) else (bots[sel].i  + (1 * press(pygame.K_r) - 1 * press(pygame.K_f)) * ctrlrate)
   bots[sel].d  = 0.0 if press(pygame.K_b) else (bots[sel].d  + (1 * press(pygame.K_t) - 1 * press(pygame.K_g)) * ctrlrate)
-  bots[sel].m  = 1000.0 if press(pygame.K_n) else max((bots[sel].m  + (1 * press(pygame.K_y) - 1 * press(pygame.K_h)) * ctrlrate), 0.01)
+  bots[sel].m  = 1.0 if press(pygame.K_n) else max((bots[sel].m  + (1 * press(pygame.K_y) - 1 * press(pygame.K_h)) * ctrlrate), 0.01)
   bots[sel].mu = 0.0 if press(pygame.K_m) else (bots[sel].mu + (1 * press(pygame.K_u) - 1 * press(pygame.K_j)) * ctrlrate)
-  bots[sel].mf = 0.1 if press(pgkeycomma) else (bots[sel].mf + (1 * press(pygame.K_i) - 1 * press(pygame.K_k)) * ctrlrate)
+  bots[sel].mf = 1.0 if press(pgkeycomma) else (bots[sel].mf + (1 * press(pygame.K_i) - 1 * press(pygame.K_k)) * ctrlrate)
 
   for key in holdkeys:
     hold[key] = 0 if not keys[key] else hold[key] + 1
+
+  mx, my = pygame.mouse.get_pos()
+  mouseinfo = f"Mouse at {mx:4n}, {my:4n}: FFT = {bots[sel].fftr[mx]:09.4f} + {bots[sel].ffti[mx]:09.4f}j"
   return None
 
 def drawrobot(self: Robot.Robot, sp):
-  dat = [self.x, self.v, self.f, self.g]
-  l = range(len(dat))
-  pts = [[] for _ in dat]
-  for t in range(sx):
+  dat = [self.x, self.v, self.f, self.g, self.fftr, self.ffti]
+  l, tr = range(len(dat)), range(sx)
+  pts = [[0 for t in tr] for _ in dat]
+  for t in tr:
+    cx, cy = xy2s(t / skl, 0, sp)
     for i in l:
-      cx, cy = xy2s(t / skl, 0, sp)
       x, y = xy2s(t / skl, dat[i][t], sp)
-      pts[i].append((x, y))
-      if self.atgoal[t] and self.overshooting[t]:
-        pygame.draw.line(screen, (0,0,64), (cx, cy), (x, y))
-      elif self.atgoal[t]:
-        pygame.draw.line(screen, (0,64,0), (cx, cy), (x, y))
-      elif self.overshooting[t]:
-        pygame.draw.line(screen, (64,0,0), (cx, cy), (x, y))
+      pts[i][t] = (x, y)
+    if self.atgoal[t] and self.overshooting[t]:
+      pygame.draw.line(screen, (0,0,64), (cx, cy), pts[0][t])
+    elif self.atgoal[t]:
+      pygame.draw.line(screen, (0,64,0), (cx, cy), pts[0][t])
+    elif self.overshooting[t]:
+      pygame.draw.line(screen, (64,0,0), (cx, cy), pts[0][t])
   for i in l:
     pygame.draw.lines(screen, self.c[i], False, pts[i])
   return None
@@ -110,13 +113,18 @@ def drawhud(clock):
   text("ix : Q / A, iv : W / S, p : E / D, i : R / F, d : T / G, m : Y / H, mu : U / J, mf : I / K", 320, 10, "white")
   for bot in bots:
     c = "green" if bot.id == sel else "gray"
-    y = 30 + 20 * bot.id
+    y = 30 + 40 * bot.id
     text(f"Bot {bot.id}", 10, y, c)
     text("Pos", 80, y, bot.c[0])
     text("Vel", 130, y, bot.c[1])
     text("Force", 180, y, bot.c[2])
     text("Goal", 250, y, bot.c[3])
-    text(bot.info, 320, y, c)
+    text("FFTr", 310, y, bot.c[4])
+    text("FFTi", 360, y, bot.c[5])
+    text(bot.info, 420, y, c)
+    text(f"Bot {bot.id}", 10, y + 20, c)
+    text(bot.stats, 80, y + 20, c)
+  text(mouseinfo, 10, y + 40, "gray")
 
 def main():
   global bots
@@ -124,11 +132,11 @@ def main():
   clock = pygame.time.Clock()
   dt = 0
   sp = 0
-  i = (0.000, 0.010, 0.100, 0.000, 0.000, 1000.000, 0.000, 0.010)
+  i = (1.0 / skl, 0.000, 1.000, 1.000, 0.000, 0.000, 1.000, 0.000, 1.000)
   #i = (0.00, 1.00, 1.00, 0.00, 0.00, 1.00, 0.00, 0.01)
   #def goal(self, t):
   #  return np.sin(t / 100.0)
-  bots.append(Robot.Robot(0, i, sx, ["Red", "Yellow", "Green", "RoyalBlue"], "PID"))
+  bots.append(Robot.Robot(0, i, sx, ["Red", "Yellow", "Green", "RoyalBlue", "Violet", "Orange"], "PID"))
   #bots.append(Robot.Robot(1, i, sx, ["Red", "Yellow", "Green", "RoyalBlue"], "PID"))
   # bots[0].mu = 0.85
   #bots[0].goal = goal
