@@ -19,7 +19,11 @@ class Robot:
 		self.a = [0 for _ in range(self.l)] # Acceleration
 		self.f = [0 for _ in range(self.l)] # Force
 		self.g = [0 for _ in range(self.l)] # Goal
+		self.atgoal = [0 for _ in range(self.l)] # At Goal
+		self.overshooting = [0 for _ in range(self.l)] # Overshooting
 		self.c = nc # Color
+		self.info = ""
+		self.stats = ""
 		
 		if nfeq == "Spring":
 			self._feq = self.feq_spring
@@ -79,7 +83,7 @@ class Robot:
 		return self._m
 	@m.setter
 	def m(self, n):
-		if self._m != n:
+		if self._m != n and n > 0:
 			self._m = n
 			self.sim()
 
@@ -97,7 +101,7 @@ class Robot:
 		return self._mf
 	@mf.setter
 	def mf(self, n):
-		if self._mf != n:
+		if self._mf != n and n > 0:
 			self._mf = n
 			self.sim()	
 
@@ -123,15 +127,15 @@ class Robot:
 
 	def goal(self, t):
 		#return np.sin(t / 100.0)
-		return 0
+		return -1
 
 	def feq_spring(self, t):
 		return -self._p * self.x[t - 1]
 
 	def feq_pid(self, t):
 		p = self._p * self.e[t]
-		i = 0
-		d = 0
+		i = 0 if t < 10 else self._i * (sum(self.e[t-10:t]) / 10)
+		d = self._d * (self.e[t] - self.e[t - 1])
 		return p + i + d
 
 
@@ -139,19 +143,67 @@ class Robot:
 		pass
 
 	def sim(self):
+		# Take notes
+		se = 0.0
+		tforce = 0.0
+		nerror = 0.0
+		terror = 0.0
+		tlosses = 0.0
+		tatgoal = 0.0
+		overshot = 0.0
+		tovershot = 0.0
+
+		# Initialize
 		self.x[0] = self._ix
 		self.v[0] = self._iv
+		self.g[0] = self.goal(0)
+		self.e[0] = self.g[0] - self.x[0]
+		se = self.e[0] / abs(self.e[0])
+
+		# Simulate
 		for t in range(1, self.l):
+			# Define goal
 			self.g[t] = self.goal(t)
+			# Error
 			self.e[t] = self.g[t] - self.x[t - 1]
-			self.f[t] = self._feq(t) - self._mu * self.v[t - 1]
+			nerror += abs(self.e[t])
+			terror += self.e[t]
+			# Generate required thrust
+			f = self._feq(t)
+			# Generate actual available thrust
+			f = min(self.mf, f) if f > 0 else max(-self.mf, f)
+			# Accumulate total forces
+			tforce += abs(f)
+			# Generate force due to friction
+			loss = self._mu * self.v[t - 1]
+			# Accumulate total losses
+			tlosses += loss
+			# Sum total force
+			self.f[t] = f - loss
+			# Physics
 			self.a[t] = self.f[t] / self.m
 			self.v[t] = self.v[t - 1] + self.a[t]
 			self.x[t] = self.x[t - 1] + self.v[t]
-		return None
-  
-	def info(self):
+
+			if abs(self.g[t] - self.x[t]) < abs(self._mf):
+				self.atgoal[t] = True
+				tatgoal += 1
+			else:
+				self.atgoal[t] = False
+			if abs(self.x[t] - self.x[0]) > abs(self.g[t] - self.x[0]):
+				self.overshooting[t] = True
+				overshot += self.v[t]
+			else:
+				self.overshooting[t] = False
+
+		# Update information
 		s1, s2 = self.s()
-		txt = f"ix = {self._ix:.2f}, iv = {self._iv:.2f}, p = {self._p:.2f}, i = {self._i:.2f}, d = {self._d:.2f}, "
-		txt += f"m = {self._m:.2f}, mu = {self._mu:.2f}, mf = {self._mf:.2f}, s = [{s1:.2f}, {s2:.2f}]"
-		return txt
+		self.info = f"ix = {self._ix:.3f}, iv = {self._iv:.3f}, p = {self._p:.3f}, i = {self._i:.3f}, d = {self._d:.3f}, "
+		self.info += f"m = {self._m:.3f}, mu = {self._mu:.3f}, mf = {self._mf:.3f}, s = [{s1:.3f}, {s2:.3f}]        "
+
+		# Calculate post-sim stats
+		self.info += f"Total force = {tforce:.3f}, net error = {nerror:.3f}, total error = {terror:.3f}, "
+		self.info += f"total losses = {tlosses:.3f}, "
+		self.info += f"total at goal = {tatgoal/self.l:05.2%}, total overshoot = {overshot:.3f}"
+
+		return None

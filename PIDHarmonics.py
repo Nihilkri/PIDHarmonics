@@ -58,7 +58,9 @@ def getkeyinput(dt):
     paused = not paused
   
   sel          = (sel + 1 * press(pygame.K_UP) - 1 * press(pygame.K_DOWN) + len(bots)) % len(bots)
-  ctrlrate, pgkeycomma = 0.01 + 0.99 * (keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]), pygame.K_COMMA
+  ctrlrate, pgkeycomma = 0.25 * dt, pygame.K_COMMA
+  ctrlrate *= 100 if (keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]) else 1.0
+  ctrlrate *= 0.01 if (keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]) else 1.0
   bots[sel].ix = 0.0 if press(pygame.K_z) else (bots[sel].ix + (1 * press(pygame.K_q) - 1 * press(pygame.K_a)) * ctrlrate)
   bots[sel].iv = 0.0 if press(pygame.K_x) else (bots[sel].iv + (1 * press(pygame.K_w) - 1 * press(pygame.K_s)) * ctrlrate)
   bots[sel].p  = 1.0 if press(pygame.K_c) else (bots[sel].p  + (1 * press(pygame.K_e) - 1 * press(pygame.K_d)) * ctrlrate)
@@ -66,7 +68,7 @@ def getkeyinput(dt):
   bots[sel].d  = 0.0 if press(pygame.K_b) else (bots[sel].d  + (1 * press(pygame.K_t) - 1 * press(pygame.K_g)) * ctrlrate)
   bots[sel].m  = 1000.0 if press(pygame.K_n) else max((bots[sel].m  + (1 * press(pygame.K_y) - 1 * press(pygame.K_h)) * ctrlrate), 0.01)
   bots[sel].mu = 0.0 if press(pygame.K_m) else (bots[sel].mu + (1 * press(pygame.K_u) - 1 * press(pygame.K_j)) * ctrlrate)
-  bots[sel].mf = 0.0 if press(pgkeycomma) else (bots[sel].mf + (1 * press(pygame.K_i) - 1 * press(pygame.K_k)) * ctrlrate)
+  bots[sel].mf = 0.1 if press(pgkeycomma) else (bots[sel].mf + (1 * press(pygame.K_i) - 1 * press(pygame.K_k)) * ctrlrate)
 
   for key in holdkeys:
     hold[key] = 0 if not keys[key] else hold[key] + 1
@@ -78,8 +80,15 @@ def drawrobot(self: Robot.Robot, sp):
   pts = [[] for _ in dat]
   for t in range(sx):
     for i in l:
+      cx, cy = xy2s(t / skl, 0, sp)
       x, y = xy2s(t / skl, dat[i][t], sp)
       pts[i].append((x, y))
+      if self.atgoal[t] and self.overshooting[t]:
+        pygame.draw.line(screen, (0,0,64), (cx, cy), (x, y))
+      elif self.atgoal[t]:
+        pygame.draw.line(screen, (0,64,0), (cx, cy), (x, y))
+      elif self.overshooting[t]:
+        pygame.draw.line(screen, (64,0,0), (cx, cy), (x, y))
   for i in l:
     pygame.draw.lines(screen, self.c[i], False, pts[i])
   return None
@@ -107,7 +116,7 @@ def drawhud(clock):
     text("Vel", 130, y, bot.c[1])
     text("Force", 180, y, bot.c[2])
     text("Goal", 250, y, bot.c[3])
-    text(bot.info(), 320, y, c)
+    text(bot.info, 320, y, c)
 
 def main():
   global bots
@@ -115,11 +124,14 @@ def main():
   clock = pygame.time.Clock()
   dt = 0
   sp = 0
-  i = (0.00, 0.01, 0.10, 0.00, 0.00, 1000.00, 0.00, 0.01)
+  i = (0.000, 0.010, 0.100, 0.000, 0.000, 1000.000, 0.000, 0.010)
   #i = (0.00, 1.00, 1.00, 0.00, 0.00, 1.00, 0.00, 0.01)
+  #def goal(self, t):
+  #  return np.sin(t / 100.0)
   bots.append(Robot.Robot(0, i, sx, ["Red", "Yellow", "Green", "RoyalBlue"], "PID"))
-  bots.append(Robot.Robot(1, i, sx, ["Red", "Yellow", "Green", "RoyalBlue"], "PID"))
+  #bots.append(Robot.Robot(1, i, sx, ["Red", "Yellow", "Green", "RoyalBlue"], "PID"))
   # bots[0].mu = 0.85
+  #bots[0].goal = goal
 
   # player_pos = pygame.Vector2(screen.get_width() / 2, screen.get_height() / 2)
 
