@@ -15,21 +15,26 @@ class Robot:
 		self._mu  = i[8]	# Friction
 		self._mf  = i[9]	# Max force
 		self.l = nl				# Simulation Length
+		self.g = np.zeros(self.l) # Goal
 		self.e = np.zeros(self.l) # Error
 		self.x = np.zeros(self.l) # Position
 		self.v = np.zeros(self.l) # Velocity
 		self.a = np.zeros(self.l) # Acceleration
-		self.f = np.zeros(self.l) # Force
-		self.g = np.zeros(self.l) # Goal
-		self.atgoal = np.zeros(self.l) # At Goal
-		self.overshooting = np.zeros(self.l) # Overshooting
+		self.f = np.zeros(self.l) # Total Force
+		self.fp = np.zeros(self.l) # Force due to proportion
+		self.fi = np.zeros(self.l) # Force due to integration
+		self.fd = np.zeros(self.l) # Force due to derivation
+		self.fk = np.zeros(self.l) # Force due to spring
 		self.fftr = np.zeros(self.l) # Real FFT of Pos
 		self.ffti = np.zeros(self.l) # Im FFT of Pos
+		self.atgoal = np.zeros(self.l) # At Goal
+		self.overshooting = np.zeros(self.l) # Overshooting
 		self.c = nc # Color
 		self.info = ""
 		self.stats = ""
-		self.linevis = [True for _ in range(10)]
+		self.linevis = [True for _ in range(12)]
 
+		self.goal()
 		self.sim()
 
 	def s(self):
@@ -43,18 +48,22 @@ class Robot:
 	def energy():
 		return None
 
-	def goal(self, t, s):
-		#return np.sin(t * (2.0 * np.pi))
-		#return self.x[s - 1]
-		#return np.floor(t) % 10.0
-		return self.id + 1
+	def goal(self):
+		for s in range(1, self.l):
+			t = s * self._skl
+			#self.g[s] = np.sin(t * (2.0 * np.pi))
+			#self.g[s] = self.x[s - 1]
+			#self.g[s] = np.floor(t) % 10.0
+			self.g[s] = self.id + 1
+		return None
 
 	def feq(self, t, s):
-		p = self._p * self.e[s]
-		i = 0 if s < 100 else self._i * (sum(self.e[s - 100:s]) * self._skl)
-		d = self._d * (self.e[s] - self.e[s - 1]) / self._skl
-		k = -self._k * self.x[s - 1]
-		return p + i + d + k
+		self.fp[s] = self._p * self.e[s]
+		self.fi[s] = 0 if s < 100 else self._i * (sum(self.e[s - 100:s]) * self._skl)
+		self.fd[s] = self._d * (self.e[s] - self.e[s - 1]) / self._skl
+		self.fk[s] = -self._k * self.x[s - 1]
+		self.f[s] = self.fp[s] + self.fi[s] + self.fd[s] + self.fk[s]
+		return self.f[s]
 
 	def sim(self):
 		# Take notes
@@ -70,15 +79,12 @@ class Robot:
 		# Initialize
 		self.x[0] = self._ix
 		self.v[0] = self._iv
-		self.g[0] = self.goal(0, 0)
 		self.e[0] = self.g[0] - self.x[0]
 		#signerror = self.e[0] / abs(self.e[0])
 
 		# Simulate
 		for s in range(1, self.l):
 			t = s * self._skl
-			# Define goal
-			self.g[s] = self.goal(t, s)
 			# Error
 			self.e[s] = self.g[s] - self.x[s - 1]
 			nerror += abs(self.e[s])

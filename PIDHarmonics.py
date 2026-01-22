@@ -20,14 +20,15 @@ running = True
 paused = False
 step = False
 keys = pygame.key.get_pressed()
-holdkeys = [pygame.K_SPACE, pygame.K_UP, pygame.K_DOWN, 
-            pygame.K_0, pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4,
-            pygame.K_5, pygame.K_6, pygame.K_7, pygame.K_8, pygame.K_9]
+holdkeys = [pygame.K_SPACE, pygame.K_UP, pygame.K_DOWN, pygame.K_BACKQUOTE, pygame.K_BACKSPACE, 
+            pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5, pygame.K_6, 
+            pygame.K_7, pygame.K_8, pygame.K_9, pygame.K_0, pygame.K_MINUS, pygame.K_EQUALS]
 hold = {_:0 for _ in holdkeys}
 holdrate = 30
 bots: list[Robot.Robot] = []
 sel = 0
 mouseinfo = ""
+omx, omy = 0, 0
 
 def press(key) -> bool:
   if key in holdkeys:
@@ -44,6 +45,7 @@ def getkeyinput(dt):
   global bots
   global sel
   global mouseinfo
+  global omx, omy
 
   # poll for events
   # pygame.QUIT event means the user clicked X to close your window
@@ -52,6 +54,8 @@ def getkeyinput(dt):
       running = False
     elif event.type == pygame.KEYDOWN:
       pass
+    elif event.type == pygame.MOUSEBUTTONUP:
+      bots[sel].sim()
 
   keys = pygame.key.get_pressed()
   if keys[pygame.K_ESCAPE]:
@@ -59,27 +63,16 @@ def getkeyinput(dt):
   if press(pygame.K_SPACE):
     paused = not paused
 
+  mx, my, mb = *pygame.mouse.get_pos(), pygame.mouse.get_pressed(3)
   sel = (sel + 1 * press(pygame.K_UP) - 1 * press(pygame.K_DOWN) + len(bots)) % len(bots)
-  if press(pygame.K_0):
-    bots[sel].linevis[0] = not bots[sel].linevis[0]
-  if press(pygame.K_1):
-    bots[sel].linevis[1] = not bots[sel].linevis[1]
-  if press(pygame.K_2):
-    bots[sel].linevis[2] = not bots[sel].linevis[2]
-  if press(pygame.K_3):
-    bots[sel].linevis[3] = not bots[sel].linevis[3]
-  if press(pygame.K_4):
-    bots[sel].linevis[4] = not bots[sel].linevis[4]
-  if press(pygame.K_5):
-    bots[sel].linevis[5] = not bots[sel].linevis[5]
-  if press(pygame.K_6):
-    bots[sel].linevis[6] = not bots[sel].linevis[6]
-  if press(pygame.K_7):
-    bots[sel].linevis[7] = not bots[sel].linevis[7]
-  if press(pygame.K_8):
-    bots[sel].linevis[8] = not bots[sel].linevis[8]
-  if press(pygame.K_9):
-    bots[sel].linevis[9] = not bots[sel].linevis[9]
+  klen = len(bots[sel].linevis)
+  for k in range(klen):
+    if press(holdkeys[k - klen]) or press(pygame.K_BACKQUOTE):
+      bots[sel].linevis[k] = not bots[sel].linevis[k]
+  if press(pygame.K_BACKSPACE) and not mb[0]:
+    bots[sel].goal()
+    bots[sel].sim()
+
   
   ctrlrate, pgkeycomma, pgkeyperid = 0.25 * dt, pygame.K_COMMA, pygame.K_PERIOD
   ctrlrate *= 100 if (keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]) else 1.0
@@ -97,32 +90,42 @@ def getkeyinput(dt):
   for key in holdkeys:
     hold[key] = 0 if not keys[key] else hold[key] + 1
 
-  mx, my = pygame.mouse.get_pos()
+  if mb[0]:
+    mx = 0 if mx < 0 else sx if mx > sx else mx
+    my = 0 if my < 0 else sy if my > sy else my
+    dx, dy = mx - omx, my - omy
+    for t in range(0, dx, 1 if dx > 0 else -1):
+      x = omx + t
+      y = omy + t * dy / dx
+      y = s2xy(x, y, 0)[1] 
+      bots[sel].g[x] = y
+  omx, omy = mx, my
+
   mouseinfo = "ix: Q / A        iv: W / S           p: E / D      i: R / F      d: T / G     "
   mouseinfo += "k: Y / H      m: U / J         mu: I / K       mf: O / L       "
   mouseinfo += f"Mouse at {mx:4n}, {my:4n}: FFT = {bots[sel].fftr[mx]:09.4f} + {bots[sel].ffti[mx]:09.4f}j"
   return None
 
 def drawrobot(self: Robot.Robot, sp):
-  dat = [self.x, self.v, self.f, self.g, self.fftr, self.ffti]
+  dat = [self.g, self.e, self.x, self.v, self.f, self.fp, self.fi, self.fd, self.fk, self.fftr, self.ffti]
   l, tr = range(len(dat)), range(sx)
   pts = [[0 for t in tr] for _ in dat]
   for t in tr:
     cx, cy = xy2s(t / skl, 0, sp)
     for i in l:
-      if i == 0 or self.linevis[i]:
+      if i == 2 or self.linevis[i]:
         x, y = xy2s(t / skl, dat[i][t], sp)
         pts[i][t] = (x, y)
-    if self.linevis[9]:
+    if self.linevis[-1]:
       if self.atgoal[t] and self.overshooting[t]:
-        pygame.draw.line(screen, (0,0,64), (cx, cy), pts[0][t])
+        pygame.draw.line(screen, (0,0,64), (cx, cy), pts[2][t])
       elif self.atgoal[t]:
-        pygame.draw.line(screen, (0,64,0), (cx, cy), pts[0][t])
+        pygame.draw.line(screen, (0,64,0), (cx, cy), pts[2][t])
       elif self.overshooting[t]:
-        pygame.draw.line(screen, (64,0,0), (cx, cy), pts[0][t])
+        pygame.draw.line(screen, (64,0,0), (cx, cy), pts[2][t])
   for i in l:
     if self.linevis[i]:
-      pygame.draw.lines(screen, self.c[i], False, pts[i])
+      pygame.draw.lines(screen, self.c[i], False, pts[i], 2)
   return None
 
 def fmttime(t):
@@ -139,18 +142,15 @@ def drawhud(clock):
   else:
     text(str(f"{clock.get_fps():05.2f} fps"), 10, 10, "green")
   text(str(fmttime(sp)), 110, 10, "gray")
-  text(mouseinfo, 420, 10, "gray")
+  text(mouseinfo, 800, 10, "gray")
   for bot in bots:
     c = "green" if bot.id == sel else "gray"
     y = 30 + 40 * bot.id
     text(f"Bot {bot.id}", 10, y, c)
-    text("Pos"  ,  80, y, bot.c[0] if bot.linevis[0] else "gray")
-    text("Vel"  , 130, y, bot.c[1] if bot.linevis[1] else "gray")
-    text("Force", 180, y, bot.c[2] if bot.linevis[2] else "gray")
-    text("Goal" , 250, y, bot.c[3] if bot.linevis[3] else "gray")
-    text("FFTr" , 310, y, bot.c[4] if bot.linevis[4] else "gray")
-    text("FFTi" , 360, y, bot.c[5] if bot.linevis[5] else "gray")
-    text(bot.info, 420, y, c)
+    btxt = ["Goal", "Error", "Pos", "Vel", "Force", "F(p)", "F(i)", "F(d)", "F(k)", "FFTr", "FFTi"]
+    for i, txt in enumerate(btxt):
+      text(txt, 80 + 60 * i, y, bot.c[i] if bot.linevis[i] else "gray")
+    text(bot.info, 800, y + 00, c)
     text(f"Bot {bot.id}", 10, y + 20, c)
     text(bot.stats, 80, y + 20, c)
 
@@ -161,10 +161,11 @@ def main():
   dt = 0
   sp = 0
   i = (1.0 / skl, 0.000, 1.000, 1.000, 0.000, 0.000, 0.000, 1.000, 0.000, 1.000)
+  c = ["RoyalBlue", "Blue", "Red", "Yellow", "Green", "Green", "Green", "Green", "Green", "Violet", "Orange"]
   #def goal(self, t):
   #  return np.sin(t / 100.0)
-  bots.append(Robot.Robot(0, i, sx, ["Red", "Yellow", "Green", "RoyalBlue", "Violet", "Orange"]))
-  bots.append(Robot.Robot(1, i, sx, ["Red", "Yellow", "Green", "RoyalBlue", "Violet", "Orange"]))
+  bots.append(Robot.Robot(0, i, sx, c))
+  bots.append(Robot.Robot(1, i, sx, c))
   # bots[0].mu = 0.85
   #bots[0].goal = goal
 
