@@ -28,7 +28,8 @@ class Robot:
 		self.c = nc # Color
 		self.info = ""
 		self.stats = ""
-		
+		self.linevis = [True for _ in range(10)]
+
 		self.sim()
 
 	def s(self):
@@ -43,15 +44,15 @@ class Robot:
 		return None
 
 	def goal(self, t, s):
-		return np.sin(t * (2.0 * np.pi))
+		#return np.sin(t * (2.0 * np.pi))
 		#return self.x[s - 1]
 		#return np.floor(t) % 10.0
-		#return 5
+		return self.id + 1
 
 	def feq(self, t, s):
 		p = self._p * self.e[s]
-		i = 0 if s < 10 else self._i * (sum(self.e[s - 10:s]) / 10)
-		d = self._d * (self.e[s] - self.e[s - 1])
+		i = 0 if s < 100 else self._i * (sum(self.e[s - 100:s]) * self._skl)
+		d = self._d * (self.e[s] - self.e[s - 1]) / self._skl
 		k = -self._k * self.x[s - 1]
 		return p + i + d + k
 
@@ -115,8 +116,8 @@ class Robot:
 		c = 2 * (self._k * self._m) ** 0.5
 		f = (self._k / self._m) ** 0.5
 		self.info = f"ix = {self._ix:.3f}m, iv = {self._iv:.3f}m/s, p = {self._p:.3f}, i = {self._i:.3f}, d = {self._d:.3f}, "
-		self.info += f"k = {self._k:.3f}, f = {f:.3f}, "
-		self.info += f"m = {self._m:.3f}kg, mu = {self._mu:.3f}, mf = {self._mf:.3f}N, s = [{s1:.3f}, {s2:.3f}], c = {c:.3f}        "
+		self.info += f"k = {self._k:.3f}, m = {self._m:.3f}kg, mu = {self._mu:.3f}, mf = {self._mf:.3f}N, "
+		self.info += f"s = [{s1:.3f}, {s2:.3f}], c = {c:.3f}, f = {f:.3f}        "
 
 		# Calculate post-sim stats
 		avg = sum(self.x) / self.l
