@@ -20,12 +20,13 @@ running = True
 paused = False
 step = False
 keys = pygame.key.get_pressed()
-holdkeys = [pygame.K_SPACE, pygame.K_UP, pygame.K_DOWN]
+holdkeys = [pygame.K_SPACE, pygame.K_UP, pygame.K_DOWN, pygame.K_0, pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5]
 hold = {_:0 for _ in holdkeys}
 holdrate = 30
 bots: list[Robot.Robot] = []
 sel = 0
 mouseinfo = ""
+linevis = [True for _ in range(6)]
 
 def press(key) -> bool:
   if key in holdkeys:
@@ -42,6 +43,7 @@ def getkeyinput(dt):
   global bots
   global sel
   global mouseinfo
+  global linevis
 
   # poll for events
   # pygame.QUIT event means the user clicked X to close your window
@@ -56,7 +58,20 @@ def getkeyinput(dt):
     running = False
   if press(pygame.K_SPACE):
     paused = not paused
+  #if press(pygame.K_0):
+  #  linevis[0] = not linevis[0]
+  if press(pygame.K_1):
+    linevis[1] = not linevis[1]
+  if press(pygame.K_2):
+    linevis[2] = not linevis[2]
+  if press(pygame.K_3):
+    linevis[3] = not linevis[3]
+  if press(pygame.K_4):
+    linevis[4] = not linevis[4]
+  if press(pygame.K_5):
+    linevis[5] = not linevis[5]
   
+
   sel          = (sel + 1 * press(pygame.K_UP) - 1 * press(pygame.K_DOWN) + len(bots)) % len(bots)
   ctrlrate, pgkeycomma = 0.25 * dt, pygame.K_COMMA
   ctrlrate *= 100 if (keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]) else 1.0
@@ -84,8 +99,9 @@ def drawrobot(self: Robot.Robot, sp):
   for t in tr:
     cx, cy = xy2s(t / skl, 0, sp)
     for i in l:
-      x, y = xy2s(t / skl, dat[i][t], sp)
-      pts[i][t] = (x, y)
+      if linevis[i]:
+        x, y = xy2s(t / skl, dat[i][t], sp)
+        pts[i][t] = (x, y)
     if self.atgoal[t] and self.overshooting[t]:
       pygame.draw.line(screen, (0,0,64), (cx, cy), pts[0][t])
     elif self.atgoal[t]:
@@ -93,7 +109,8 @@ def drawrobot(self: Robot.Robot, sp):
     elif self.overshooting[t]:
       pygame.draw.line(screen, (64,0,0), (cx, cy), pts[0][t])
   for i in l:
-    pygame.draw.lines(screen, self.c[i], False, pts[i])
+    if linevis[i]:
+      pygame.draw.lines(screen, self.c[i], False, pts[i])
   return None
 
 def fmttime(t):
@@ -115,12 +132,12 @@ def drawhud(clock):
     c = "green" if bot.id == sel else "gray"
     y = 30 + 40 * bot.id
     text(f"Bot {bot.id}", 10, y, c)
-    text("Pos", 80, y, bot.c[0])
-    text("Vel", 130, y, bot.c[1])
-    text("Force", 180, y, bot.c[2])
-    text("Goal", 250, y, bot.c[3])
-    text("FFTr", 310, y, bot.c[4])
-    text("FFTi", 360, y, bot.c[5])
+    text("Pos", 80, y, bot.c[0] if linevis[0] else "gray")
+    text("Vel", 130, y, bot.c[1] if linevis[1] else "gray")
+    text("Force", 180, y, bot.c[2] if linevis[2] else "gray")
+    text("Goal", 250, y, bot.c[3] if linevis[3] else "gray")
+    text("FFTr", 310, y, bot.c[4] if linevis[4] else "gray")
+    text("FFTi", 360, y, bot.c[5] if linevis[5] else "gray")
     text(bot.info, 420, y, c)
     text(f"Bot {bot.id}", 10, y + 20, c)
     text(bot.stats, 80, y + 20, c)
