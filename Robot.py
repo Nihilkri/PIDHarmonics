@@ -32,7 +32,7 @@ class Robot:
 		self.c = nc # Color
 		self.info = ""
 		self.stats = ""
-		self.linevis = [True for _ in range(12)]
+		self.linevis = [False for _ in range(12)]
 
 		self.goal()
 		self.sim()
@@ -59,13 +59,14 @@ class Robot:
 
 	def feq(self, t, s):
 		self.fp[s] = self._p * self.e[s]
-		self.fi[s] = 0 if s < 100 else self._i * (sum(self.e[s - 100:s]) * self._skl)
+		self.fi[s] = self._i * (sum(self.e[s - min(100, s):s]) * self._skl)
 		self.fd[s] = self._d * (self.e[s] - self.e[s - 1]) / self._skl
 		self.fk[s] = -self._k * self.x[s - 1]
 		self.f[s] = self.fp[s] + self.fi[s] + self.fd[s] + self.fk[s]
 		return self.f[s]
 
 	def sim(self):
+		twopi = 2.0 * np.pi
 		# Take notes
 		signerror = 0.0
 		tforce = 0.0
@@ -75,9 +76,12 @@ class Robot:
 		tatgoal = 0.0
 		overshot = 0.0
 		tovershot = 0.0
+		wavelength = 0.0
 
 		# Initialize
 		self.x[0] = self._ix
+		peak = self.x[0]
+		oldpeak = self.x[0]
 		self.v[0] = self._iv
 		self.e[0] = self.g[0] - self.x[0]
 		#signerror = self.e[0] / abs(self.e[0])
@@ -106,6 +110,13 @@ class Robot:
 			self.v[s] = self.v[s - 1] + self.a[s] * self._skl
 			self.x[s] = self.x[s - 1] + self.v[s] * self._skl
 
+			if self.x[s] >= self.x[s - 1]:
+				peak = s
+			else:
+				if peak == s - 1:
+					wavelength = (peak - oldpeak) * self._skl
+					oldpeak = peak
+
 			if abs(self.g[s] - self.x[s]) < abs(self._skl):
 				self.atgoal[s] = True
 				tatgoal += 1
@@ -121,9 +132,10 @@ class Robot:
 		s1, s2 = self.s()
 		c = 2 * (self._k * self._m) ** 0.5
 		f = (self._k / self._m) ** 0.5
+		freq = 0.0 if wavelength == 0.0 else 1.0 / wavelength * twopi
 		self.info = f"ix = {self._ix:.3f}m, iv = {self._iv:.3f}m/s, p = {self._p:.3f}, i = {self._i:.3f}, d = {self._d:.3f}, "
 		self.info += f"k = {self._k:.3f}, m = {self._m:.3f}kg, mu = {self._mu:.3f}, mf = {self._mf:.3f}N, "
-		self.info += f"s = [{s1:.3f}, {s2:.3f}], c = {c:.3f}, f = {f:.3f}        "
+		self.info += f"s = [{s1:.3f}, {s2:.3f}], c = {c:.3f}, f = {f:.3f}, freq = {freq:.3f}/2pi        "
 
 		# Calculate post-sim stats
 		avg = sum(self.x) / self.l

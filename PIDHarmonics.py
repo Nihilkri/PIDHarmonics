@@ -179,8 +179,10 @@ def main():
       #drawsin(sp)
       for bot in bots:
         drawrobot(bot, sp)
+      #showcolors()
     getkeyinput(dt)
     drawhud(clock)
+
 
     # flip() the display to put your work on screen
     pygame.display.flip()

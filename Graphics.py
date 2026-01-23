@@ -42,3 +42,18 @@ def drawsin(sp):
   #print(pts[0:20])
   return None
 
+def showcolors():
+  colors = pygame.colordict.THECOLORS
+  nc = len(colors)
+  asy = sy - 100
+  sa = sx * asy
+  ar = sx / asy
+  ca = sa / nc
+  cx = (int)((ca * ar)**0.5)
+  cy = (int)(cx / ar)
+  nx, ny = sx // cx, asy // cy
+  text(f"Colors: {nc}, size per color: {cx}, {cy}, number of colors: {nx}, {ny}", 2700, 10, "White", "Black")
+  for i, c in enumerate(colors):
+    x, y = (int)((i // ny) * cx), (int)((i % ny) * cy) + 100
+    pygame.draw.rect(screen, c, (x, y, cx, cy), 0)
+  return None
