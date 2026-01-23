@@ -31,6 +31,7 @@ bots: list[Robot.Robot] = []
 sel = 0
 mouseinfo = ""
 omx, omy = 0, 0
+touchx, touchy = 0, 0
 
 def press(key) -> bool:
   if key in holdkeys:
@@ -48,6 +49,7 @@ def getkeyinput(dt):
   global sel
   global mouseinfo
   global omx, omy
+  global touchx, touchy
 
   # poll for events
   # pygame.QUIT event means the user clicked X to close your window
@@ -58,6 +60,20 @@ def getkeyinput(dt):
       pass
     elif event.type == pygame.MOUSEBUTTONUP:
       bots[sel].sim()
+    # Check for finger inputs
+    elif event.type == pygame.FINGERDOWN:
+        touchx, touchy = event.x * sx, event.y * sy
+        if event.finger_id == 2:
+          running = False
+        if touchy >= 30 and touchy < 30 + 40 * len(bots):
+          sel = (int)((touchy - 30) // 40)
+        if touchx >= 10 and touchx < 80 + 60 * len(bots[sel].linevis):
+          i = (int)((touchx - 80) // 60)
+          if i >= 0:
+            bots[sel].linevis[i] = not bots[sel].linevis[i]
+        
+    elif event.type == pygame.FINGERUP:
+        pass
 
   keys = pygame.key.get_pressed()
   if keys[pygame.K_ESCAPE]:
@@ -155,6 +171,9 @@ def drawhud(clock):
     text(bot.info, 800, y + 00, c)
     text(f"Bot {bot.id}", 10, y + 20, c)
     text(bot.stats, 80, y + 20, c)
+    pygame.draw.line(screen, "magenta", (0, touchy), (sx, touchy))
+    pygame.draw.line(screen, "magenta", (touchx, 0), (touchx, sy))
+    
 
 def main():
   global bots

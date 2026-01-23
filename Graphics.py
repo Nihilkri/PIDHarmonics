@@ -2,8 +2,8 @@ import numpy as np
 import pygame
 
 # Constants
-#sx, sy, skl, sp = 1280, 720, 100.0, 0.0
-sx, sy, skl, sp = 3840, 2160, 100.0, 0.0
+sx, sy, skl, sp = 1920, 1080, 100.0, 0.0
+#sx, sy, skl, sp = 3840, 2160, 100.0, 0.0
 hsx, hsy = sx // 2, sy // 2
 # pygame setup
 pygame.init()
