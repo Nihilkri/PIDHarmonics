@@ -1,10 +1,12 @@
 import numpy as np
 
+def params(dt, ix, iv, p, i, d, k, m, mu, mf):
+	return (dt, ix, iv, p, i, d, k, m, mu, mf)
 
 class Robot:
 	def __init__(self, nid, i, nl, nc):
 		self.id   = nid		# Serial Identification Number
-		self._skl = i[0]	# Time scaling
+		self._dt = i[0]	# Time scaling
 		self._ix  = i[1]	# Initial Position
 		self._iv  = i[2]	# Initial Velocity
 		self._p   = i[3]	# Proportional Coefficient
@@ -23,8 +25,10 @@ class Robot:
 		self.f = np.zeros(self.l) # Total Force
 		self.fp = np.zeros(self.l) # Force due to proportion
 		self.fi = np.zeros(self.l) # Force due to integration
+		self.li = np.zeros(self.l) # The integration
 		self.fd = np.zeros(self.l) # Force due to derivation
 		self.fk = np.zeros(self.l) # Force due to spring
+		self.fl = np.zeros(self.l) # Force due to losses/friction
 		self.fftr = np.zeros(self.l) # Real FFT of Pos
 		self.ffti = np.zeros(self.l) # Im FFT of Pos
 		self.atgoal = np.zeros(self.l) # At Goal
@@ -49,8 +53,8 @@ class Robot:
 		return None
 
 	def goal(self):
-		for s in range(1, self.l):
-			t = s * self._skl
+		for s in range(0, self.l):
+			t = s * self._dt
 			#self.g[s] = np.sin(t * (2.0 * np.pi))
 			#self.g[s] = self.x[s - 1]
 			#self.g[s] = np.floor(t) % 10.0
@@ -58,11 +62,21 @@ class Robot:
 		return None
 
 	def feq(self, t, s):
-		self.fp[s] = self._p * self.e[s]
-		self.fi[s] = self._i * (sum(self.e[s - min(100, s):s]) * self._skl)
-		self.fd[s] = self._d * (self.e[s] - self.e[s - 1]) / self._skl
-		self.fk[s] = -self._k * self.x[s - 1]
-		self.f[s] = self.fp[s] + self.fi[s] + self.fd[s] + self.fk[s]
+		e0, e1, e2 = self.e[s], self.e[s - 1], 0.0 if s < 2 else self.e[s - 2]
+		# My implementation
+		self.fp[s] = self._p * e0
+		self.fi[s] = self._i * self.li[s]
+		self.fd[s] = self._d * (e0 - e1) / self._dt
+
+		# https://en.wikipedia.org/wiki/Proportional%E2%80%93integral%E2%80%93derivative_controller#Discrete_implementation
+		#self.fp[s] = self._p * (e0 - e1) + self.fp[s - 1]
+		#self.fi[s] = self._i * e0 * self._dt + self.fi[s - 1]
+		#self.fd[s] = self._d * (e0 - 2.0 * e1 + e2) / self._dt + self.fd[s - 1]
+
+		# Sum regardless of implementation
+		f = self.fp[s] + self.fi[s] + self.fd[s]
+		# Generate actual available thrust
+		self.f[s] = min(self.mf, f) if f > 0 else max(-self.mf, f)
 		return self.f[s]
 
 	def sim(self):
@@ -84,40 +98,48 @@ class Robot:
 		oldpeak = self.x[0]
 		self.v[0] = self._iv
 		self.e[0] = self.g[0] - self.x[0]
+		self.li[0] = self.e[0] * self._dt
+
+		#self.x[1] = self._ix
+		#peak = self.x[1]
+		#oldpeak = self.x[1]
+		#self.v[1] = self._iv
+		#self.e[1] = self.g[1] - self.x[1]
 		#signerror = self.e[0] / abs(self.e[0])
 
 		# Simulate
 		for s in range(1, self.l):
-			t = s * self._skl
+			t = s * self._dt
 			# Error
 			self.e[s] = self.g[s] - self.x[s - 1]
+			self.li[s] = self.li[s - 1] + self.e[s] * self._dt
 			nerror += abs(self.e[s])
 			terror += self.e[s]
 			# Generate required thrust
 			f = self.feq(t, s)
-			# Generate actual available thrust
-			f = min(self.mf, f) if f > 0 else max(-self.mf, f)
-			# Accumulate total forces
+			# Accumulate total thrust
 			tforce += abs(f)
+			# Generate force due to spring
+			self.fk[s] = -self._k * self.x[s - 1]
 			# Generate force due to friction
-			loss = self._mu * self.v[s - 1] * self._skl
+			self.fl[s] = -self._mu * self.v[s - 1] * self._dt
 			# Accumulate total losses
-			tlosses += loss
+			tlosses += self.fl[s]
 			# Sum total force
-			self.f[s] = f - loss
+			self.f[s] += self.fk[s] + self.fl[s]
 			# Physics
 			self.a[s] = self.f[s] / self.m
-			self.v[s] = self.v[s - 1] + self.a[s] * self._skl
-			self.x[s] = self.x[s - 1] + self.v[s] * self._skl
+			self.v[s] = self.v[s - 1] + self.a[s] * self._dt
+			self.x[s] = self.x[s - 1] + self.v[s] * self._dt
 
 			if self.x[s] >= self.x[s - 1]:
 				peak = s
 			else:
 				if peak == s - 1:
-					wavelength = (peak - oldpeak) * self._skl
+					wavelength = (peak - oldpeak) * self._dt
 					oldpeak = peak
 
-			if abs(self.g[s] - self.x[s]) < abs(self._skl):
+			if abs(self.g[s] - self.x[s]) < abs(self._dt):
 				self.atgoal[s] = True
 				tatgoal += 1
 			else:
@@ -152,12 +174,12 @@ class Robot:
 		return None
 
 	@property
-	def skl(self):
-		return self._skl
-	@skl.setter
-	def skl(self, n):
-		if self._skl != n:
-			self._skl = n
+	def dt(self):
+		return self._dt
+	@dt.setter
+	def dt(self, n):
+		if self._dt != n:
+			self._dt = n
 			self.sim()	
 
 	@property

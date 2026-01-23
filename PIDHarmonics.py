@@ -20,7 +20,9 @@ running = True
 paused = False
 step = False
 keys = pygame.key.get_pressed()
-holdkeys = [pygame.K_SPACE, pygame.K_UP, pygame.K_DOWN, pygame.K_BACKQUOTE, pygame.K_BACKSPACE, 
+holdkeys = [pygame.K_SPACE, pygame.K_UP, pygame.K_DOWN, pygame.K_BACKQUOTE, pygame.K_BACKSPACE,
+            pygame.K_z, pygame.K_x, pygame.K_c, pygame.K_v, pygame.K_b, 
+            pygame.K_n, pygame.K_m, pygame.K_COMMA, pygame.K_PERIOD, pygame.K_SLASH, 
             pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5, pygame.K_6, 
             pygame.K_7, pygame.K_8, pygame.K_9, pygame.K_0, pygame.K_MINUS, pygame.K_EQUALS]
 hold = {_:0 for _ in holdkeys}
@@ -74,18 +76,18 @@ def getkeyinput(dt):
     bots[sel].sim()
 
   
-  ctrlrate, pgkeycomma, pgkeyperid = 0.25 * dt, pygame.K_COMMA, pygame.K_PERIOD
+  ctrlrate, pgkeycomma, pgkeyperid, pgkeyslash = 0.25 * dt, pygame.K_COMMA, pygame.K_PERIOD, pygame.K_SLASH
   ctrlrate *= 100 if (keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]) else 1.0
   ctrlrate *= 0.01 if (keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]) else 1.0
-  bots[sel].ix = 0.0 if press(pygame.K_z) else (bots[sel].ix + (1 * press(pygame.K_q) - 1 * press(pygame.K_a)) * ctrlrate)
-  bots[sel].iv = 0.0 if press(pygame.K_x) else (bots[sel].iv + (1 * press(pygame.K_w) - 1 * press(pygame.K_s)) * ctrlrate)
-  bots[sel].p  = 0.0 if press(pygame.K_c) else (bots[sel].p  + (1 * press(pygame.K_e) - 1 * press(pygame.K_d)) * ctrlrate)
-  bots[sel].i  = 0.0 if press(pygame.K_v) else (bots[sel].i  + (1 * press(pygame.K_r) - 1 * press(pygame.K_f)) * ctrlrate)
-  bots[sel].d  = 0.0 if press(pygame.K_b) else (bots[sel].d  + (1 * press(pygame.K_t) - 1 * press(pygame.K_g)) * ctrlrate)
-  bots[sel].k  = 1.0 if press(pygame.K_n) else (bots[sel].k  + (1 * press(pygame.K_y) - 1 * press(pygame.K_h)) * ctrlrate)
-  bots[sel].m  = 1.0 if press(pygame.K_m) else (bots[sel].m  + (1 * press(pygame.K_u) - 1 * press(pygame.K_j)) * ctrlrate)
-  bots[sel].mu = 0.0 if press(pgkeycomma) else (bots[sel].mu + (1 * press(pygame.K_i) - 1 * press(pygame.K_k)) * ctrlrate)
-  bots[sel].mf = 1.0 if press(pgkeyperid) else (bots[sel].mf + (1 * press(pygame.K_o) - 1 * press(pygame.K_l)) * ctrlrate)
+  bots[sel].ix = (1.0 if bots[sel].ix == 0.0 else 0.0) if press(pygame.K_z) else (bots[sel].ix + (1 * press(pygame.K_q) - 1 * press(pygame.K_a)) * ctrlrate)
+  bots[sel].iv = (1.0 if bots[sel].iv == 0.0 else 0.0) if press(pygame.K_x) else (bots[sel].iv + (1 * press(pygame.K_w) - 1 * press(pygame.K_s)) * ctrlrate)
+  bots[sel].p  = (1.0 if bots[sel].p  == 0.0 else 0.0) if press(pygame.K_c) else (bots[sel].p  + (1 * press(pygame.K_e) - 1 * press(pygame.K_d)) * ctrlrate)
+  bots[sel].i  = (1.0 if bots[sel].i  == 0.0 else 0.0) if press(pygame.K_v) else (bots[sel].i  + (1 * press(pygame.K_r) - 1 * press(pygame.K_f)) * ctrlrate)
+  bots[sel].d  = (1.0 if bots[sel].d  == 0.0 else 0.0) if press(pygame.K_b) else (bots[sel].d  + (1 * press(pygame.K_t) - 1 * press(pygame.K_g)) * ctrlrate)
+  bots[sel].k  = (1.0 if bots[sel].k  == 0.0 else 0.0) if press(pygame.K_n) else (bots[sel].k  + (1 * press(pygame.K_y) - 1 * press(pygame.K_h)) * ctrlrate)
+  bots[sel].m  = (1.0 if bots[sel].m  == 1.0 else 1.0) if press(pygame.K_m) else (bots[sel].m  + (1 * press(pygame.K_u) - 1 * press(pygame.K_j)) * ctrlrate)
+  bots[sel].mu = (1.0 if bots[sel].mu == 0.0 else 0.0) if press(pgkeycomma) else (bots[sel].mu + (1 * press(pygame.K_i) - 1 * press(pygame.K_k)) * ctrlrate)
+  bots[sel].mf = (1.0 if bots[sel].mf == 1.0 else 1.0) if press(pgkeyperid) else (bots[sel].mf + (1 * press(pygame.K_o) - 1 * press(pygame.K_l)) * ctrlrate)
 
   for key in holdkeys:
     hold[key] = 0 if not keys[key] else hold[key] + 1
@@ -107,7 +109,7 @@ def getkeyinput(dt):
   return None
 
 def drawrobot(self: Robot.Robot, sp):
-  dat = [self.g, self.e, self.x, self.v, self.f, self.fp, self.fi, self.fd, self.fk, self.fftr, self.ffti]
+  dat = [self.g, self.e, self.x, self.v, self.f, self.fp, self.fi, self.fd, self.fk, self.fl, self.fftr, self.ffti]
   l, tr = range(len(dat)), range(sx)
   pts = [[0 for t in tr] for _ in dat]
   for t in tr:
@@ -147,7 +149,7 @@ def drawhud(clock):
     c = "green" if bot.id == sel else "gray"
     y = 30 + 40 * bot.id
     text(f"Bot {bot.id}", 10, y, c)
-    btxt = ["Goal", "Error", "Pos", "Vel", "Force", "F(p)", "F(i)", "F(d)", "F(k)", "FFTr", "FFTi"]
+    btxt = ["Goal", "Error", "Pos", "Vel", "Force", "F(p)", "F(i)", "F(d)", "F(k)", "F(l)", "FFTr", "FFTi"]
     for i, txt in enumerate(btxt):
       text(txt, 80 + 60 * i, y, bot.c[i] if bot.linevis[i] else "gray")
     text(bot.info, 800, y + 00, c)
@@ -160,12 +162,14 @@ def main():
   clock = pygame.time.Clock()
   dt = 0
   sp = 0
-  i = (1.0 / skl, 0.000, 1.000, 1.000, 0.000, 0.000, 0.000, 1.000, 0.000, 1.000)
-  c = ["RoyalBlue", "Blue", "Red", "Yellow", "Green", "Green", "Green", "Green", "Green", "Violet", "Orange"]
+  i1 = Robot.params(1.0 / skl, 1.000, 0.000, 0.000, 0.000, 0.000, 1.000, 1.000, 0.000, 1.000)
+  #i2 = Robot.params(1.0 / skl, 0.000, 1.000, 1.000, 0.000, 0.000, 0.000, 1.000, 0.000, 1.000)
+  i2 = Robot.params(1.0 / skl, 1.000, 0.000, 1.291, 0.000, 0.134, 1.000, 1.000, 41.918, 69.925)
+  c = ["RoyalBlue", "Blue", "Red", "Yellow", "Green", "Green", "Green", "Green", "Green", "Green", "Violet", "Orange"]
   #def goal(self, t):
   #  return np.sin(t / 100.0)
-  bots.append(Robot.Robot(0, i, sx, c))
-  bots.append(Robot.Robot(1, i, sx, c))
+  bots.append(Robot.Robot(0, i1, sx, c))
+  bots.append(Robot.Robot(1, i2, sx, c))
   # bots[0].mu = 0.85
   #bots[0].goal = goal
 
