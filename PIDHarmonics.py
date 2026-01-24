@@ -184,7 +184,7 @@ def main():
   i1 = Robot.params(1.0 / skl, 1.000, 0.000, 0.000, 0.000, 0.000, 1.000, 1.000, 0.000, 1.000)
   #i2 = Robot.params(1.0 / skl, 0.000, 1.000, 1.000, 0.000, 0.000, 0.000, 1.000, 0.000, 1.000)
   i2 = Robot.params(1.0 / skl, 1.000, 0.000, 1.291, 0.000, 0.134, 1.000, 1.000, 41.918, 69.925)
-  c = ["RoyalBlue", "Blue", "Red", "Yellow", "Green", "Green", "Green", "Green", "Green", "Green", "Violet", "Orange"]
+  c = ["DodgerBlue", "Blue", "Red", "Yellow", "Green", "Deeppink", "Khaki", "Seagreen", "Turquoise", "Magenta", "Violet", "Orange"]
   #def goal(self, t):
   #  return np.sin(t / 100.0)
   bots.append(Robot.Robot(0, i1, sx, c))
@@ -198,11 +198,13 @@ def main():
     # Main loop
     if not paused:
       #sp += dt
+      # fill the screen with a color to wipe away anything from last frame
+      screen.fill("black")
+      #showcolors()
       drawgrid(sp)
       #drawsin(sp)
       for bot in bots:
         drawrobot(bot, sp)
-      #showcolors()
     getkeyinput(dt)
     drawhud(clock)
 

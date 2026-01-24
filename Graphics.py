@@ -1,12 +1,13 @@
 import numpy as np
 import pygame
 
-# Constants
-sx, sy, skl, sp = 1920, 1080, 100.0, 0.0
-#sx, sy, skl, sp = 3840, 2160, 100.0, 0.0
-hsx, hsy = sx // 2, sy // 2
 # pygame setup
 pygame.init()
+# Constants
+print()
+sx, sy, skl, sp = *pygame.display.get_desktop_sizes()[0], 100.0, 0.0
+#sx, sy, skl, sp = 3840, 2160, 100.0, 0.0
+hsx, hsy = sx // 2, sy // 2
 screen = pygame.display.set_mode((sx, sy))
 font = pygame.font.Font(None, 32)
   
@@ -20,8 +21,6 @@ def s2xy(x, y, sp):
   return (x + sp) / skl, (-y + hsy) / skl
 
 def drawgrid(sp):
-  # fill the screen with a color to wipe away anything from last frame
-  screen.fill("black")
   for i in range((int)(sp), (int)(sx // skl + sp + 2)):
     x, y = xy2s(i, 0, sp)
     pygame.draw.line(screen, "gray", (x, 0), (x, sy))
@@ -55,5 +54,10 @@ def showcolors():
   text(f"Colors: {nc}, size per color: {cx}, {cy}, number of colors: {nx}, {ny}", 2700, 10, "White", "Black")
   for i, c in enumerate(colors):
     x, y = (int)((i // ny) * cx), (int)((i % ny) * cy) + 100
+    r, g, b, a = colors[c]
+    rgb = f"{r:02X}{g:02X}{b:02X}{a:02X}"
+    r, g, b = 255 - r, 255 - g, 255 - b
     pygame.draw.rect(screen, c, (x, y, cx, cy), 0)
+    text(c, x, y, (r,g,b,a), c)
+    text(rgb, x, y + 20, (r,g,b,a), c)
   return None
