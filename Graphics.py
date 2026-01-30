@@ -1,6 +1,7 @@
 import numpy as np
 import pygame
 
+graphicsmode = True
 # pygame setup
 pygame.init()
 # Constants

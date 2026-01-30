@@ -16,23 +16,23 @@ class Robot:
 		self._m   = i[7]	# Mass
 		self._mu  = i[8]	# Friction
 		self._mf  = i[9]	# Max force
-		self.l = nl				# Simulation Length
-		self.g = np.zeros(self.l) # Goal
-		self.e = np.zeros(self.l) # Error
-		self.x = np.zeros(self.l) # Position
-		self.v = np.zeros(self.l) # Velocity
-		self.a = np.zeros(self.l) # Acceleration
-		self.f = np.zeros(self.l) # Total Force
-		self.fp = np.zeros(self.l) # Force due to proportion
-		self.fi = np.zeros(self.l) # Force due to integration
-		self.li = np.zeros(self.l) # The integration
-		self.fd = np.zeros(self.l) # Force due to derivation
-		self.fk = np.zeros(self.l) # Force due to spring
-		self.fl = np.zeros(self.l) # Force due to losses/friction
-		self.fftr = np.zeros(self.l) # Real FFT of Pos
-		self.ffti = np.zeros(self.l) # Im FFT of Pos
-		self.atgoal = np.zeros(self.l) # At Goal
-		self.overshooting = np.zeros(self.l) # Overshooting
+		self._l = nl			# Simulation Length
+		self.g = np.zeros(self._l) # Goal
+		self.e = np.zeros(self._l) # Error
+		self.x = np.zeros(self._l) # Position
+		self.v = np.zeros(self._l) # Velocity
+		self.a = np.zeros(self._l) # Acceleration
+		self.f = np.zeros(self._l) # Total Force
+		self.fp = np.zeros(self._l) # Force due to proportion
+		self.fi = np.zeros(self._l) # Force due to integration
+		self.li = np.zeros(self._l) # The integration
+		self.fd = np.zeros(self._l) # Force due to derivation
+		self.fk = np.zeros(self._l) # Force due to spring
+		self.fl = np.zeros(self._l) # Force due to losses/friction
+		self.fftr = np.zeros(self._l) # Real FFT of Pos
+		self.ffti = np.zeros(self._l) # Im FFT of Pos
+		self.atgoal = np.zeros(self._l) # At Goal
+		self.overshooting = np.zeros(self._l) # Overshooting
 		self.c = nc # Color
 		self.info = ""
 		self.stats = ""
@@ -79,6 +79,12 @@ class Robot:
 		self.f[s] = min(self.mf, f) if f > 0 else max(-self.mf, f)
 		return self.f[s]
 
+# TODO: Add a 2d controller for water temperature and pressure.
+# Separate the physics engine from the output of the controller.
+# Inputs are flow rate, pressure, and temperature of hot and cold water.
+# Outputs control the flow rate, goals are ideal temperature and pressure.
+# Research how to translate between valve open % and water pressure.
+# Research Bernoulli and how flow rate leads to pressure.
 	def sim(self):
 		twopi = 2.0 * np.pi
 		# Take notes
@@ -262,3 +268,12 @@ class Robot:
 		if self._mf != n and n > 0:
 			self._mf = n
 			self.sim()	
+
+	@property
+	def l(self):
+		return self._l
+	@l.setter
+	def l(self, n):
+		if self._l != n and n > 0:
+			self.__init__(self.id, 
+			(self._dt, self._ix, self._iv, self._p, self._i, self._d, self._k, self._m, self._mu, self._mf), n, self.c)

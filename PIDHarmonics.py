@@ -31,7 +31,7 @@ bots: list[Robot.Robot] = []
 sel = 0
 mouseinfo = ""
 omx, omy = 0, 0
-touchx, touchy = 0, 0
+touchx, touchy, touchf = 0, 0, 0
 
 def press(key) -> bool:
   if key in holdkeys:
@@ -39,7 +39,16 @@ def press(key) -> bool:
   else:
     return keys[key]
 
-def getkeyinput(dt):
+def getkeyinputs(dt):
+  pass
+
+def getmouseinputs(dt):
+  pass
+
+def gettouchinputs(dt):
+  pass
+
+def getinputs(dt):
   global running
   global paused
   global step
@@ -49,20 +58,30 @@ def getkeyinput(dt):
   global sel
   global mouseinfo
   global omx, omy
-  global touchx, touchy
+  global touchx, touchy, touchf
+  global sx, sy, hx, hy, screen
 
   # poll for events
   # pygame.QUIT event means the user clicked X to close your window
   for event in pygame.event.get():
     if event.type == pygame.QUIT:
       running = False
+    elif event.type == pygame.WINDOWRESIZED:
+      sx, sy = event.x, event.y
+      hsx, hsy = sx // 2, sy // 2
+      screen = pygame.display.set_mode((sx, sy))
+      for bot in bots:
+        bot.l = sx
     elif event.type == pygame.KEYDOWN:
       pass
     elif event.type == pygame.MOUSEBUTTONUP:
       bots[sel].sim()
     # Check for finger inputs
+    elif event.type == pygame.FINGERUP:
+      touchf = max(0, touchf - 1)
     elif event.type == pygame.FINGERDOWN:
         touchx, touchy = event.x * sx, event.y * sy
+        touchf += 1
         if event.finger_id == 2:
           running = False
         if touchy >= 30 and touchy < 30 + 40 * len(bots):
@@ -71,9 +90,6 @@ def getkeyinput(dt):
           i = (int)((touchx - 80) // 60)
           if i >= 0:
             bots[sel].linevis[i] = not bots[sel].linevis[i]
-        
-    elif event.type == pygame.FINGERUP:
-        pass
 
   keys = pygame.key.get_pressed()
   if keys[pygame.K_ESCAPE]:
@@ -108,7 +124,7 @@ def getkeyinput(dt):
   for key in holdkeys:
     hold[key] = 0 if not keys[key] else hold[key] + 1
 
-  if mb[0]:
+  if mb[0] or touchf == 1:
     mx = 0 if mx < 0 else sx if mx > sx else mx
     my = 0 if my < 0 else sy if my > sy else my
     dx, dy = mx - omx, my - omy
@@ -120,8 +136,8 @@ def getkeyinput(dt):
   omx, omy = mx, my
 
   mouseinfo = "ix: Q / A        iv: W / S           p: E / D      i: R / F      d: T / G     "
-  mouseinfo += "k: Y / H      m: U / J         mu: I / K       mf: O / L       "
-  mouseinfo += f"Mouse at {mx:4n}, {my:4n}: FFT = {bots[sel].fftr[mx]:09.4f} + {bots[sel].ffti[mx]:09.4f}j"
+  #mouseinfo += "k: Y / H      m: U / J         mu: I / K       mf: O / L       "
+  mouseinfo = f"Mouse at {mx:4n}, {my:4n}: FFT = {bots[sel].fftr[mx]:09.4f} + {bots[sel].ffti[mx]:09.4f}j"
   return None
 
 def drawrobot(self: Robot.Robot, sp):
@@ -160,7 +176,6 @@ def drawhud(clock):
   else:
     text(str(f"{clock.get_fps():05.2f} fps"), 10, 10, "green")
   text(str(fmttime(sp)), 110, 10, "gray")
-  text(mouseinfo, 800, 10, "gray")
   for bot in bots:
     c = "green" if bot.id == sel else "gray"
     y = 30 + 40 * bot.id
@@ -171,8 +186,10 @@ def drawhud(clock):
     text(bot.info, 800, y + 00, c)
     text(f"Bot {bot.id}", 10, y + 20, c)
     text(bot.stats, 80, y + 20, c)
-    pygame.draw.line(screen, "magenta", (0, touchy), (sx, touchy))
-    pygame.draw.line(screen, "magenta", (touchx, 0), (touchx, sy))
+  text(mouseinfo, 800, 10, "gray")
+  text(mouseinfo, 10, y + 40, "gray")
+  pygame.draw.line(screen, "magenta", (0, touchy), (sx, touchy))
+  pygame.draw.line(screen, "magenta", (touchx, 0), (touchx, sy))
     
 
 def main():
@@ -205,7 +222,7 @@ def main():
       #drawsin(sp)
       for bot in bots:
         drawrobot(bot, sp)
-    getkeyinput(dt)
+    getinputs(dt)
     drawhud(clock)
 
 
